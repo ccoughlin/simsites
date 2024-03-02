@@ -1,0 +1,6 @@
+beautifulsoup4
+clean-text
+mistralai
+scikit-learn
+requests
+duckduckgo-search
