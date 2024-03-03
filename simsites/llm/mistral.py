@@ -1,8 +1,10 @@
 """
 mistral - code for working w. Mistral AI
 """
-from typing import *
 import os
+from typing import *
+from typing import List
+
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
 
@@ -10,6 +12,8 @@ MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
 MISTRAL_MEDIUM = "mistral-medium-latest"
 MISTRAL_LARGE = "mistral-large-latest"
 DEFAULT_MISTRAL_MODEL = MISTRAL_LARGE
+
+MISTRAL_EMBEDDINGS = "mistral-embed"
 
 MISTRAL_SEO_KEYWORDS_PROMPT = '''
 You are an expert Search Engine Optimization (SEO) Consultant. You are helping a client optimize their site contents to improve their search engine ranking for a specific search. You performed the search and clustered key terms from the top 10 search results for that same search. Your task is to explain these keywords to your customer in easy to understand terms, that they can then use to improve the contents of their own site.
@@ -67,3 +71,24 @@ def make_seo_recommendations(search: AnyStr, keywords: List[AnyStr]) -> Any:
         messages=messages
     )
     return chat_response.choices[0].message.content
+
+
+def generate_embeddings(
+        lines: List[AnyStr],
+        chunk_size: int = 25
+) -> list[list[float]]:
+    """
+    Generates embeddings for a list of strings.
+    :param lines: lines to embed.
+    :param chunk_size: number of lines per "chunked" call to API. Defaults to 25.
+    :return: list of lists of floats
+    """
+    client = MistralClient(api_key=MISTRAL_API_KEY)
+    embeddings = list()
+    for chunk in [lines[i: i + chunk_size] for i in range(0, len(lines), chunk_size)]:
+        embeddings_batch_response = client.embeddings(
+            model=MISTRAL_EMBEDDINGS,
+            input=chunk,
+        )
+        embeddings.extend([line_embed.embedding for line_embed in embeddings_batch_response.data])
+    return embeddings

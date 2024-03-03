@@ -1,6 +1,8 @@
-beautifulsoup4
+beautifulsoup4~=4.12.3
 clean-text
-mistralai
-scikit-learn
-requests
+mistralai~=0.0.12
+scikit-learn~=1.4.1.post1
+requests~=2.31.0
 duckduckgo-search
+torch~=2.2.1
+numpy~=1.26.4

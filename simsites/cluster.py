@@ -11,12 +11,16 @@ from simsites.util.text_cleaner import strip_site, split_site
 
 def cluster_sites(
         site_sources: List[AnyStr],
+        embed_function: Any = generate_embeddings,
         min_cluster_size: int = 5,
         threshold: float = 0.75
 ) -> Dict[AnyStr, Any]:
     """
     Clusters the text from one or more websites.
     :param site_sources: HTML source for the sites to cluster.
+    :param embed_function: function to generate embeddings, should accept a list of strings and return a list of floats
+    or tensors.
+    Defaults to local embeddings with the "generate_embeddings" function if not specified.
     :param min_cluster_size: minimum cluster size in lines: groupings below this are considered outliers and not
     returned.
     :param threshold: clustering (similarity) threshold to consider two strings as members of the same cluster.
@@ -37,7 +41,7 @@ def cluster_sites(
         if len(site_as_lines) > 0:
             lines.extend(site_as_lines)
     if len(lines) > 0:
-        site_embeddings = generate_embeddings(lines)
+        site_embeddings = embed_function(lines)
         clusters = util.community_detection(site_embeddings, min_community_size=min_cluster_size, threshold=threshold)
         return {
             'lines': lines,
