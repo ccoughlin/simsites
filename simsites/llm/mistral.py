@@ -1,19 +1,21 @@
 """
 mistral - code for working w. Mistral AI
 """
+import json
 import os
 from typing import *
-from typing import List
+import logging
+import requests
 
-from mistralai.client import MistralClient
-from mistralai.models.chat_completion import ChatMessage
 
 MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
+MISTRAL_COMPLETIONS_URL = "https://api.mistral.ai/v1/chat/completions"
 MISTRAL_MEDIUM = "mistral-medium-latest"
 MISTRAL_LARGE = "mistral-large-latest"
 DEFAULT_MISTRAL_MODEL = MISTRAL_LARGE
 
 MISTRAL_EMBEDDINGS = "mistral-embed"
+MISTRAL_EMBEDDINGS_URL = "https://api.mistral.ai/v1/embeddings"
 
 MISTRAL_SEO_KEYWORDS_PROMPT = '''
 You are an expert Search Engine Optimization (SEO) Consultant. You are helping a client optimize their site contents to improve their search engine ranking for a specific search. You performed the search and clustered key terms from the top 10 search results for that same search. Your task is to explain these keywords to your customer in easy to understand terms, that they can then use to improve the contents of their own site.
@@ -53,27 +55,120 @@ Your Answer:
 '''
 
 
-def make_seo_recommendations(search: AnyStr, keywords: List[AnyStr]) -> Any:
-    client = MistralClient(api_key=MISTRAL_API_KEY)
-    messages = [
-        ChatMessage(
-            role="system",
-            content=MISTRAL_SEO_KEYWORDS_PROMPT.format(keywords=keywords, search=search)
-        ),
-        ChatMessage(
-            role="user",
-            content="What do these keywords for the top search results for this search tell me about optimizing my "
-                    "site for the same search?"
+USER_ROLE = 'user'
+SYSTEM_ROLE = 'system'
+AVAILABLE_ROLES = [USER_ROLE, SYSTEM_ROLE]
+
+REQUEST_HEADERS = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': f'Bearer {MISTRAL_API_KEY}'
+}
+
+
+def gen_mistral_message(content: AnyStr, role: AnyStr) -> Dict:
+    """
+    Generates a Mistral message: dict with a role and content.
+    :param content: content of the message
+    :param role: role, must be one of "AVAILABLE_ROLES"
+    :return: dict
+    """
+    if role not in AVAILABLE_ROLES:
+        logging.error("Role '{0}' not available, must be one of {1}".format(role, AVAILABLE_ROLES))
+    else:
+        return {
+            'role': role,
+            'content': content
+        }
+
+
+def user_message(content: AnyStr, json_response: bool = False) -> Dict:
+    """
+    Generates a Mistral user message
+    :param content: content of the message
+    :param json_response: if True, adds the 'response_format' parameter to the message required for JSON responses
+    from Mistral
+    :return: dict
+    """
+    msg = gen_mistral_message(role=USER_ROLE, content=content)
+    if json_response:
+        msg['response_format'] = {"type": "json_object"}
+    return msg
+
+
+def system_message(content: AnyStr) -> Dict:
+    """
+    Generates a Mistral system message.
+    :param content: content of the message
+    :return: dict
+    """
+    return gen_mistral_message(role=SYSTEM_ROLE, content=content)
+
+
+def request(
+    url: AnyStr,
+    data: Dict[AnyStr, Any],
+    timeout: int = 30
+) -> Any:
+    """
+    Makes a request to the Mistral API.
+    :param url: URL to hit
+    :param data: data to be sent w. the request
+    :param timeout: request timeout in seconds
+    :return: JSON string response from the API if successful, otherwise None
+    """
+    result = None
+    try:
+        r = requests.post(
+            url=url,
+            headers=REQUEST_HEADERS,
+            json=data,
+            timeout=timeout
         )
-    ]
-    chat_response = client.chat(
-        model=DEFAULT_MISTRAL_MODEL,
-        messages=messages
-    )
-    return chat_response.choices[0].message.content
+        if r.status_code == 200:
+            result = r.text
+        else:
+            logging.error("Mistral API returned {0}".format(r.status_code))
+    finally:
+        return result
 
 
-def generate_embeddings(
+def completions(
+        messages: List[Dict],
+        model: AnyStr = DEFAULT_MISTRAL_MODEL,
+        timeout: int = 30
+) -> AnyStr:
+    """
+    Makes a chat completion request to the Mistral API.
+    :param messages: list of messages to send w. the request
+    :param model: model to target, defaults to "DEFAULT_MISTRAL_MODEL"
+    :param timeout: request timeout in seconds
+    :return: model's response, or None if an error occurred.
+    """
+    assistant_response = None
+    # TODO: include check for first & second messages - if first is system, second must be user
+    try:
+        response = request(
+            url=MISTRAL_COMPLETIONS_URL,
+            data={
+                'model': model,
+                'messages': messages
+            },
+            timeout=timeout
+        )
+        if completions:
+            payload = json.loads(response)
+            choices = payload['choices']
+            assistant_response = choices[0]['message']['content']
+        else:
+            logging.error("No Mistral completion request received returning None")
+    except Exception as err:
+        logging.exception(err)
+    finally:
+        return assistant_response
+
+
+def embeddings(
         lines: List[AnyStr],
         chunk_size: int = 25
 ) -> list[list[float]]:
@@ -83,12 +178,38 @@ def generate_embeddings(
     :param chunk_size: number of lines per "chunked" call to API. Defaults to 25.
     :return: list of lists of floats
     """
-    client = MistralClient(api_key=MISTRAL_API_KEY)
     embeddings = list()
-    for chunk in [lines[i: i + chunk_size] for i in range(0, len(lines), chunk_size)]:
-        embeddings_batch_response = client.embeddings(
-            model=MISTRAL_EMBEDDINGS,
-            input=chunk,
-        )
-        embeddings.extend([line_embed.embedding for line_embed in embeddings_batch_response.data])
-    return embeddings
+    try:
+        for chunk in [lines[i: i + chunk_size] for i in range(0, len(lines), chunk_size)]:
+            embeddings_response = request(
+                url=MISTRAL_EMBEDDINGS_URL,
+                data={
+                    'model': MISTRAL_EMBEDDINGS,
+                    'input': chunk
+                }
+            )
+            if embeddings_response:
+                payload = json.loads(embeddings_response)
+                embeddings.extend([embedding['embedding'] for embedding in payload['data']])
+    except Exception as err:
+        logging.exception(err)
+    finally:
+        return embeddings
+
+
+def make_seo_recommendations(search: AnyStr, keywords: List[AnyStr]) -> Any:
+    """
+    Makes SEO recommendations for a given search, based on the list of keywords.
+    :param search: search to consider
+    :param keywords: list of keywords for that search e.g. topk most common words used in first 10 search results.
+    :return: Mistral LLM's suggestions
+    """
+    return completions(
+        messages=[
+            system_message(MISTRAL_SEO_KEYWORDS_PROMPT.format(keywords=keywords, search=search)),
+            user_message(
+                "What do these keywords for the top search results for this search tell me about optimizing my "
+                "site for the same search?"
+            )
+        ]
+    )

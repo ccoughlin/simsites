@@ -31,7 +31,7 @@ def main(
     start = time.time()
     clustered_site_contents = cluster.cluster_sites(
         site_sources=site_sources,
-        embed_function=embed.generate_embeddings if local_embed else mistral.generate_embeddings
+        embed_function=embed.generate_embeddings if local_embed else mistral.embeddings
     )
     top_5 = cluster.top_keywords(
         clusters=clustered_site_contents['clusters'],
@@ -45,7 +45,7 @@ def main(
     print("Here are the Top 5 most common sets of keywords (ordered most common first):\n\n")
     for top_set in top_5:
         print("Keywords:")
-        print(','.join(top_set))
+        print(','.join([line[:25] for line in top_set]))
         print('\n')
         response = mistral.make_seo_recommendations(
             keywords=top_set,
