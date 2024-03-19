@@ -55,6 +55,27 @@ Your Answer:
 '''
 
 
+MISTRAL_CHECK_RECOMMENDATION_PROMPT = '''
+You are an expert Search Engine Optimization (SEO) Consultant. You are helping a client optimize their site contents to improve their search engine ranking for a specific search. You have come up with a recommendation, based on your analysis of the top search results for that particular site.
+
+You will be shown excerpts from your client's website that were found to be the most similar to your recommendation. Your task is to examine these excerpts and decide if they meet the criteria for your recommendation. If the excerpts do satisfy the conditions of your recommendation, you can respond to your client that they have done a good job implementing your recommendation.
+
+If the excerpts do not seem to satisfy the criteria for your recommendation or otherwise do not seem relevant, you should offer suggestions to your client on how they can improve their site based on your recommendation.
+
+Here is the web search that your client seeks your help with.
+
+Search: {search}
+
+Here is the recommendation you made for sites that want to optimize their search rankings against this search.
+
+Recommendation: {recommendation}
+
+And here are the most relevant excerpts from your client's current web site.
+
+{excerpts}
+'''
+
+
 USER_ROLE = 'user'
 SYSTEM_ROLE = 'system'
 AVAILABLE_ROLES = [USER_ROLE, SYSTEM_ROLE]
@@ -210,6 +231,23 @@ def make_seo_recommendations(search: AnyStr, keywords: List[AnyStr]) -> Any:
             user_message(
                 "What do these keywords for the top search results for this search tell me about optimizing my "
                 "site for the same search?"
+            )
+        ]
+    )
+
+
+def check_seo_recommendation(search: AnyStr, recommendation: AnyStr, most_relevant_excerpts: List[AnyStr]) -> Any:
+    return completions(
+        messages=[
+            system_message(
+                MISTRAL_CHECK_RECOMMENDATION_PROMPT.format(
+                    search=search,
+                    recommendation=recommendation,
+                    excerpts=most_relevant_excerpts
+                )
+            ),
+            user_message(
+                "Does my website meet the conditions you detailed in your SEO recommendations?"
             )
         ]
     )
