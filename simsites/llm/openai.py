@@ -1,21 +1,21 @@
 """
-mistral - code for working w. Mistral AI API
+openai - code for working w. OpenAI API
 """
 import os
 from typing import *
 
 from simsites.llm.backend import get_completions, get_embeddings, system_message, user_message
 
-MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
-MISTRAL_COMPLETIONS_URL = "https://api.mistral.ai/v1/chat/completions"
-MISTRAL_MEDIUM = "mistral-medium-latest"
-MISTRAL_LARGE = "mistral-large-latest"
-DEFAULT_MISTRAL_MODEL = MISTRAL_LARGE
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+OPENAI_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_GPT35_TURBO = "gpt-3.5-turbo-0125"
+OPENAI_GPT4_TURBO = "gpt-4-turbo-preview"
+DEFAULT_OPENAI_MODEL = OPENAI_GPT4_TURBO
 
-MISTRAL_EMBEDDINGS = "mistral-embed"
-MISTRAL_EMBEDDINGS_URL = "https://api.mistral.ai/v1/embeddings"
+OPENAI_EMBEDDINGS = "text-embedding-3-small"
+OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
 
-MISTRAL_SEO_KEYWORDS_PROMPT = '''
+OPENAI_SEO_KEYWORDS_PROMPT = '''
 You are an expert Search Engine Optimization (SEO) Consultant. You are helping a client optimize their site contents to improve their search engine ranking for a specific search. You performed the search and clustered key terms from the top 10 search results for that same search. Your task is to explain these keywords to your customer in easy to understand terms, that they can then use to improve the contents of their own site.
 
 
@@ -53,7 +53,7 @@ Your Answer:
 '''
 
 
-MISTRAL_CHECK_RECOMMENDATION_PROMPT = '''
+OPENAI_CHECK_RECOMMENDATION_PROMPT = '''
 You are an expert Search Engine Optimization (SEO) Consultant. You are helping a client optimize their site contents to improve their search engine ranking for a specific search. You have come up with a recommendation, based on your analysis of the top search results for that particular site.
 
 You will be shown excerpts from your client's website that were found to be the most similar to your recommendation. Your task is to examine these excerpts and decide if they meet the criteria for your recommendation. If the excerpts do satisfy the conditions of your recommendation, you can respond to your client that they have done a good job implementing your recommendation.
@@ -90,32 +90,23 @@ curl https://api.openai.com/v1/chat/completions   -H "Content-Type: application/
 '''
 
 
-def gen_json_response_message(content: AnyStr) -> Dict:
-    """
-    Generates a user message, and requests that the Mistral API respond with a JSON object.
-    :param content: content of the message
-    :return: dict
-    """
-    return user_message(content=content, response_format={'type': 'json_object'})
-
-
 def completions(
         messages: List[Dict],
-        model: AnyStr = DEFAULT_MISTRAL_MODEL,
+        model: AnyStr = DEFAULT_OPENAI_MODEL,
         timeout: int = 30
 ) -> AnyStr:
     """
-    Makes a chat completion request to the Mistral API.
+    Makes a chat completion request to the OpenAI API.
     :param messages: list of messages to send w. the request
-    :param model: model to target, defaults to "DEFAULT_MISTRAL_MODEL"
+    :param model: model to target, defaults to "DEFAULT_OPENAI_MODEL"
     :param timeout: request timeout in seconds
     :return: model's response, or None if an error occurred.
     """
     # TODO: include check for first & second messages - if first is system, second must be user
     return get_completions(
-        api_key=MISTRAL_API_KEY,
+        api_key=OPENAI_API_KEY,
         messages=messages,
-        completions_url=MISTRAL_COMPLETIONS_URL,
+        completions_url=OPENAI_COMPLETIONS_URL,
         model=model,
         timeout=timeout
     )
@@ -132,9 +123,9 @@ def embeddings(
     :return: list of lists of floats
     """
     return get_embeddings(
-        api_key=MISTRAL_API_KEY,
-        embeddings_url=MISTRAL_EMBEDDINGS_URL,
-        model=MISTRAL_EMBEDDINGS,
+        api_key=OPENAI_API_KEY,
+        embeddings_url=OPENAI_EMBEDDINGS_URL,
+        model=OPENAI_EMBEDDINGS,
         lines=lines,
         chunk_size=chunk_size
     )
@@ -145,11 +136,11 @@ def make_seo_recommendations(search: AnyStr, keywords: List[AnyStr]) -> Any:
     Makes SEO recommendations for a given search, based on the list of keywords.
     :param search: search to consider
     :param keywords: list of keywords for that search e.g. topk most common words used in first 10 search results.
-    :return: Mistral LLM's suggestions
+    :return: LLM's suggestions
     """
     return completions(
         messages=[
-            system_message(MISTRAL_SEO_KEYWORDS_PROMPT.format(keywords=keywords, search=search)),
+            system_message(OPENAI_SEO_KEYWORDS_PROMPT.format(keywords=keywords, search=search)),
             user_message(
                 "What do these keywords for the top search results for this search tell me about optimizing my "
                 "site for the same search?"
@@ -162,7 +153,7 @@ def check_seo_recommendation(search: AnyStr, recommendation: AnyStr, most_releva
     return completions(
         messages=[
             system_message(
-                MISTRAL_CHECK_RECOMMENDATION_PROMPT.format(
+                OPENAI_CHECK_RECOMMENDATION_PROMPT.format(
                     search=search,
                     recommendation=recommendation,
                     excerpts=most_relevant_excerpts

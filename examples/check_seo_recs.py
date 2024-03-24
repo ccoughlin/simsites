@@ -9,7 +9,10 @@ import time
 
 import requests
 
-import simsites.llm.mistral as mistral
+# Uncomment this import to use Mistral AI
+# import simsites.llm.mistral as mistral
+# Uncomment this import to use OpenAI
+import simsites.llm.openai as openai
 from simsites.util import embed, vector_store
 import logging
 
@@ -26,13 +29,13 @@ def create_vector_store(
     """
     Creates an in-memory vector store representation of a site's contents.
     :param site_src: HTML source of the site
-    :param local_embed: if True (default), uses local embeddings models. Otherwise uses Mistral API.
+    :param local_embed: if True (default), uses local embeddings models. Otherwise uses LLM API.
     :return: populated vector store
     """
     site_text = strip_site(site_src)
     site_as_lines = split_site(site_text)
     vs = vector_store.NNVectorStore(
-        embed_function=embed.generate_embeddings if local_embed else mistral.embeddings
+        embed_function=embed.generate_embeddings if local_embed else openai.embeddings
     )
     vs.add_texts(site_as_lines)
     return vs
@@ -50,7 +53,7 @@ def main(
     :param search_to_optimize: web search to optimize the site against
     :param site_src: HTML source of the site to optimize
     :param recommendation: SEO recommendation for the search in question (i.e. not specific to the site itself)
-    :param local_embed: if True (default), uses local embeddings models. If False, uses Mistral embeddings API.
+    :param local_embed: if True (default), uses local embeddings models. If False, uses LLM embeddings API.
     :param output_fname: if specified, saves the results to a JSON file.
     :return: None
     """
@@ -62,7 +65,7 @@ def main(
     site_vector_store = create_vector_store(site_src, local_embed=local_embed)
     most_relevant_site_contents = site_vector_store.get_relevant_texts(query=recommendation)
     final_results['most_relevant_site_contents'] = most_relevant_site_contents
-    response = mistral.check_seo_recommendation(
+    response = openai.check_seo_recommendation(
         search=search_to_optimize,
         recommendation=recommendation,
         most_relevant_excerpts=most_relevant_site_contents
@@ -80,6 +83,12 @@ def main(
         print("Results saved to '{0}'".format(output_fname))
 
 
+# Sample inputs:
+# Enter a web search to optimize >> Dog grooming near me
+# Enter a URL to fetch (include http[s]) >> https://www.pawbabiespetsalon.com/
+# Enter an SEO recommendation to check the site against >> **Interactive Elements**: Consider adding interactive
+# elements like a contact form or a live chat feature. These can make it easier for potential customers to get in
+# touch with you, improving user experience and potentially boosting your search engine ranking.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog='seo_recs.py',
