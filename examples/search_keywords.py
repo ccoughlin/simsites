@@ -6,8 +6,8 @@ import json
 from typing import *
 import time
 from simsites import cluster
-import simsites.llm.mistral as mistral
-from simsites.util import ddgs, embed
+import simsites.llm.openai as openai
+from simsites.util import serpapi, embed
 import logging
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
@@ -31,7 +31,7 @@ def main(
     start = time.time()
     clustered_site_contents = cluster.cluster_sites(
         site_sources=site_sources,
-        embed_function=embed.generate_embeddings if local_embed else mistral.embeddings
+        embed_function=embed.generate_embeddings if local_embed else openai.embeddings
     )
     top_5 = cluster.top_keywords(
         clusters=clustered_site_contents['clusters'],
@@ -47,7 +47,7 @@ def main(
         print("Keywords:")
         print(','.join([line[:25] for line in top_set]))
         print('\n')
-        response = mistral.make_seo_recommendations(
+        response = openai.make_seo_recommendations(
             keywords=top_set,
             search=search_to_optimize
         )
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     else:
         search = args.search
     print("Performing search: '{0}'".format(search))
-    sites = ddgs.fetch_results(
+    sites = serpapi.fetch_results(
         search=search
     )
     print("Clustering {0} site(s) found for search '{1}'".format(

@@ -4,8 +4,10 @@ serpapi - functions for working with SerpApi
 import json
 import os
 import logging
-
 import requests
+from typing import *
+
+import urllib3.exceptions
 
 SERPAPI_KEY = os.environ['SERPAPI_KEY']
 SERPAPI_HTML_URL = 'https://serpapi.com/search.html'
@@ -104,3 +106,41 @@ def get_organic_search_results(
             logging.warning("No search results received returning None")
     finally:
         return results
+
+
+def fetch_results(
+        search: AnyStr,
+        timeout: int = 30,
+        max_results: int = 10) -> List[AnyStr]:
+    """
+    Conducts a search on DuckDuckGo and returns the results.
+    :param search: search to perform
+    :param timeout: request timeout in seconds. Defaults to 30.
+    :param max_results: maximum number of results to return (defaults to 10)
+    :return: source of each search result. If a site couldn't be retrieved (e.g. blocked), returns search result
+    snippet for that result instead.
+    """
+    site_sources = list()
+    search_results = get_organic_search_results(
+        search=search,
+        timeout=timeout
+    )
+    for search_result in search_results:
+        result = search_result['snippet']
+        try:
+            r = requests.get(search_result['link'], timeout=timeout)
+            if r.status_code == 200:
+                result = r.text
+            else:
+                logging.warning("Received status code {0} for {1}, using search result body".format(
+                    r.status_code,
+                    search_result['link']
+                ))
+        except urllib3.exceptions.ReadTimeoutError:
+            logging.warning("Timed out waiting for {0}, using search result body".format(search_result['link']))
+        except Exception as err:
+            logging.error(err)
+            logging.warning("Encountered error fetching {0}, using search result body".format(search_result['link']))
+        finally:
+            site_sources.append(result)
+    return site_sources[:max_results]
