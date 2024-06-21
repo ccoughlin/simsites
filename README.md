@@ -1,22 +1,14 @@
 simsites
 =
-This repo is a proof of concept of an idea for using Generative AI (GenAI) for Search Engine Optimiztation (SEO). The basic premise is to have a Large Language Model (LLM) make recommendations for improving a site's performance in a given web search, when provided with a list of keywords that top search results include:
+This repo is a proof of concept of an idea for using Generative AI (GenAI) for Search Engine Optimization (SEO).
 
-```
-Keywords:
-Step into a world of opul,A weekend getaway or a we,Indulge your pets with th,"Emma is reliable and rea,Offering Pet Services wit
+The process starts off by fetching the top search results for a query, clustering their contents, and having the LLM make a set of observations based on what it finds in the clusters:
 
+![Screenshot 2024-06-21 164911](https://github.com/ccoughlin/simsites/assets/922923/10c15ebe-2d8c-4ed8-ad7b-153cdb4139d9)
 
-Recommendations from the LLM:
-Based on the keywords provided, here are some recommendations to optimize your site for the search "Pet sitting service Eau Claire":
+Next, the site to be optimized is fetched, and the LLM is asked to make recommendations for improving the site's rank in the search, based on what it observed about the contents of the top search results:
 
-1. **Descriptive Language**: Use descriptive and enticing language to detail your services. Phrases like "world of opulence and extravagance", "treated like royalty", and "one-of-a-kind service" can help to attract potential customers and search engines.
-
-2. **Service Variety**: Clearly outline the different services you offer. The top results include services like house sitting, playtime, and special treats. Make sure your site details what you offer in a clear and concise manner.
-
-3. **Customer Comfort**: Emphasize the comfort and well-being of the pets. The keywords show that people value their pets' comfort and want them to be stress-free while they are away. Highlight how your service ensures this.
-
-```
+![Screenshot 2024-06-21 170703](https://github.com/ccoughlin/simsites/assets/922923/38b6eb84-a567-49ec-9829-d078af61703e)
 
 Outline of the process:
 1. Conduct a web search and fetch the contents of e.g. the first 10 results.
